@@ -36,17 +36,30 @@ library
     , free
     , process
     , filepath
-    , transformers
+    , transformers >= 0.1.3.0
     , either
     , directory
     , dlist
     , temporary
+    , mtl
+    , lens
     , tasty
     , tagged
+    , mmorph
+    , random-shuffle
+    , split
+    , stm
+    , optparse-applicative
+    , monad-control
+    , lifted-base
+    , transformers-base
+    , concurrent-extra
   exposed-modules:
       Test.HClTest
-      Test.HClTest.Test
-      Test.HClTest.Driver
+      Test.HClTest.Program
+      Test.HClTest.Monad
+      Test.HClTest.Setup
+      Test.HClTest.Trace
       Test.Tasty.HClTest
 
 test-suite doctests

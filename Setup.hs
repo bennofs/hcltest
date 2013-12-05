@@ -27,7 +27,7 @@ generateBuildModule verbosity pkg lbi = do
   createDirectoryIfMissingVerbose verbosity True dir
   withLibLBI pkg lbi $ \_ libcfg -> do
     withTestLBI pkg lbi $ \suite suitecfg -> do
-      rewriteFile (dir </> "Build_" ++ testName suite ++ ".hs") $ unlines
+      rewriteFile (map fixchar $ dir </> "Build_" ++ testName suite ++ ".hs") $ unlines
         [ "module Build_" ++ testName suite ++ " where"
         , "deps :: [String]"
         , "deps = " ++ (show $ formatdeps (testDeps libcfg suitecfg))
@@ -36,6 +36,8 @@ generateBuildModule verbosity pkg lbi = do
     formatdeps = map (formatone . snd)
     formatone p = case packageName p of
       PackageName n -> n ++ "-" ++ showVersion (packageVersion p)
+    fixchar '-' = '_'
+    fixchar a = a
 
 testDeps :: ComponentLocalBuildInfo -> ComponentLocalBuildInfo -> [(InstalledPackageId, PackageId)]
 testDeps xs ys = nub $ componentPackageDeps xs ++ componentPackageDeps ys
