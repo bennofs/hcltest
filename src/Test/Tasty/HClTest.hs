@@ -38,7 +38,7 @@ instance IsTest HClTasty where
     , Option (Proxy :: Proxy HClTestSuccessLog)
     ]
 
-  run opts (HClTasty t) status = fmap toResult $ runHClTest factor t
+  run opts (HClTasty t) _ = fmap toResult $ runHClTest factor t
     where HClTestTimeoutFactor factor = lookupOption opts
           HClTestSuccessLog    sl     = lookupOption opts
           toResult (True,l) = Result True $ if sl then l else ""
