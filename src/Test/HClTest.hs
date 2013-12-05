@@ -3,7 +3,7 @@ module Test.HClTest
  ) where
 
 import Test.HClTest.Monad    as X (Config(), HClTest())
-import Test.HClTest.Monad    as X hiding (wdLock, timeoutFactor, currentWD, Config, HClTest)
+import Test.HClTest.Monad    as X hiding (wdLock, timeoutFactor, Config, HClTest)
 import Test.HClTest.Program  as X
 import Test.HClTest.Setup    as X
 import Test.HClTest.Trace    as X
