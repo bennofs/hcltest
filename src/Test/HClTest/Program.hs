@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveFunctor #-}
+-- | In this module there are functions for creating test cases that run
+-- programs. It also provides functions for running programs that require input.
 module Test.HClTest.Program
   ( Stream(..)
   , Driver(), runDriver
@@ -29,24 +31,37 @@ import           System.Timeout
 import           Test.HClTest.Monad
 import           Test.HClTest.Trace
 
+-- | A output stream. 
 data Stream = Stdout | Stderr deriving Show
 
+-- | This is the functor from which the free monad Driver is generated. 
+-- It is an enumeration of possible primitive operations possible in the Driver monad.
 data DriverF a = MatchStream Stream T.Text a
                | SendInput T.Text a
                | ExpectEOF Stream a
  deriving Functor
 
+-- | The driver monad. The driver monad is used to run programs that require input. It allows
+-- you to specify a "script" of actions, like "send input" or "expect output".
 type Driver = Free DriverF
 
+-- | Send some text to the process. The text will be encoded as UTF-8.
 send :: T.Text -> Driver ()
 send = liftF . flip SendInput ()
 
+-- | Check that the process outputs the given text on the given output stream. This only
+-- matches a prefix, so it also succeeds if the process produces more output. If you want
+-- to check that this is the only output, use expectEOF.
 expect :: Stream -> T.Text -> Driver ()
 expect s = liftF . flip (MatchStream s) ()
 
+-- | Check that the process' output ended.
 expectEOF :: Stream -> Driver ()
 expectEOF = liftF . flip ExpectEOF ()
-  
+ 
+-- | Run a driver. The first argument is the timeout for waiting for output of the process.
+-- The second argument are handles to stdin, stdout and stderr of the process. The third
+-- argument is the driver to run. This produces a test step.
 runDriver :: Int -> (Handle, Handle, Handle) -> Driver a -> HClTest String a
 runDriver time (stdinH,stdoutH,stderrH) = iterM interpret
   where interpret :: DriverF (HClTest String a) -> HClTest String a
@@ -90,6 +105,8 @@ runDriver time (stdinH,stdoutH,stderrH) = iterM interpret
           , desc
           ]
 
+-- | Try to read a number of bytes from the given handle, but fail if a timeout is reached.
+-- The second argument is the timeout, the third is the number of bytes to read.
 tryGetTimeout :: Handle -> Int -> Int -> IO (Either (Bool,BS.ByteString) BS.ByteString)
 tryGetTimeout h time m = runEitherT $ do
   eof <- lift (hIsEOF h)
@@ -105,6 +122,8 @@ tryGetTimeout h time m = runEitherT $ do
       either left right $ n & _Left._2 %~ mappend inp
     else return inp
 
+-- | Read all available data from a handle. The first argument is a timeout for waiting for output. 
+-- If the process outputs nothing for more than timeout milliseconds, that is considered end of output.
 hReadAvailable :: Int -> Handle -> IO BS.ByteString
 hReadAvailable time h = do
   eof <- hIsEOF h
@@ -118,6 +137,11 @@ hReadAvailable time h = do
           mappend c <$> hReadAvailable time h
         else return BS.empty
 
+-- | Make a test step for an interactive program. The first argument is either the working directory
+-- or Nothing, which doesn't change the working directory. The second argument is the timeout in seconds 
+-- for waiting for output of the process. The third argument is the executable file. The forth argument
+-- are the arguments for the executable and the fifth is the driver to use. The driver should return
+-- the expected exit code.
 testInteractive :: Maybe FilePath -> Int -> FilePath -> [String] -> Driver ExitCode -> HClTest Trace ()
 testInteractive wd time prog args driver = do
 
@@ -153,8 +177,12 @@ testInteractive wd time prog args driver = do
 
     return ()
 
+-- | A restricted form of testInteractive that Only tests that the process produces the given output on stderr, and no more. See 
+-- 'testInteractive' for a description of the arguments.
 testStdout :: Maybe FilePath -> Int -> FilePath -> [String] -> ExitCode -> T.Text -> HClTest Trace ()
 testStdout wd time prog args exit out = testInteractive wd time prog args $ exit <$ expect Stdout out <* expectEOF Stdout
 
+-- | A restricted form of testInteractive that only tests that the process exits with the given exit code.
+-- See 'testInteractive' for a description of the arguments.
 testExitCode :: Maybe FilePath -> Int -> FilePath -> [String] -> ExitCode -> HClTest Trace ()
 testExitCode wd time prog args = testInteractive wd time prog args . return

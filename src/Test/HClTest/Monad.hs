@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+-- | This module defines the basic test type, HClTest, which is a monad. It also provides functions
+-- for creating and running tests. 
 module Test.HClTest.Monad
   ( HClTest(..)
   , Config(..)
@@ -40,12 +42,15 @@ import           System.IO.Temp
 import           System.Random.Shuffle
 import           Test.HClTest.Trace
 
+-- | The config is passed in a Reader to the test cases. 
 data Config = Config 
   { _wdLock        :: RLock.RLock
   , _timeoutFactor :: Double
   }
 makeLenses ''Config
 
+-- | The HClTest monad. A HClTest action describes a single test case. The first argument is the type
+-- of the trace entries. For tests, this should be 'Trace'. For a single test step, this should be 'String'.
 newtype HClTest w a = HClTest { unHClTest :: ReaderT Config (MaybeT (WriterT (DL.DList w) IO)) a } deriving (Functor, Applicative, Monad, MonadIO, MonadPlus, Alternative, MonadReader Config)
 
 instance MonadBase IO (HClTest w) where
@@ -55,7 +60,13 @@ instance MonadBaseControl IO (HClTest w) where
   data StM (HClTest w) a = HClTestSt { unHClTestSt :: StM (ReaderT Config (MaybeT (WriterT (DL.DList w) IO))) a }
   liftBaseWith f = HClTest $ liftBaseWith (\k -> f (fmap HClTestSt . k . unHClTest ))
   restoreM = HClTest . restoreM . unHClTestSt
-  
+ 
+
+-- | Run a HClTest. The first argument is the timeout for waiting for output
+-- of the process, in milliseconds. The second argument is the test case.
+--
+-- This will run the test in a temporary working directory. Use the functions
+-- in Test.HClTest.Setup to setup the environment.
 runHClTestTrace :: Double -> HClTest Trace () -> IO (Bool, DL.DList Trace)
 runHClTestTrace tf (HClTest a) = runWriterT $ do
 
@@ -67,26 +78,36 @@ runHClTestTrace tf (HClTest a) = runWriterT $ do
   wdLockVar <- liftIO RLock.new
   s <- has _Just <$> runMaybeT (runReaderT a $ Config wdLockVar tf)
   
+
   when s $ liftIO $ removeDirectoryRecursive tmp
   tell $ pure $ Trace (if s then "Removed temporary directory" else "Temporary directory not removed") []
 
   liftIO $ setCurrentDirectory pwd
   return s
 
+-- | Like runHClTestTrace, but already shows the trace so that you get a string.
 runHClTest :: Double -> HClTest Trace () -> IO (Bool,String)
 runHClTest tf a = runHClTestTrace tf a & mapped._2 %~ unlines . map showTrace . DL.toList
-  
+ 
+-- | This is a HClTest action that always fails. The first argument is the trace to leave.
+-- If you want to fail without leaving a trace, you can just use 'mzero'.
 failTest :: a -> HClTest a b
 failTest x = traceMsg x *> HClTest mzero
 
+-- | Add a message to the log.
 traceMsg :: a -> HClTest a ()
 traceMsg = HClTest . tell . pure
 
+-- | Run an IO action, and fail if that action returns false. The first argument
+-- is a description of the IO action which will be used for the trace messages.
 testIO :: String -> IO Bool -> HClTest Trace ()
 testIO desc action = testStep ("Test :: " ++ desc) $ do
   success <- liftIO action
   unless success $ failTest "Failed" 
 
+-- | A single test step. The first argument is a description of the step. The test step
+-- can produce trace messages of type 'String'. Those will be collected an exactly one
+-- 'Trace' will be emitted.
 testStep :: String -> HClTest String a -> HClTest Trace a
 testStep desc (HClTest action) = HClTest $ hoist (hoist k) action
   where k :: (Functor m, Monad m) => WriterT (DL.DList String) m a -> WriterT (DL.DList Trace) m a
@@ -94,6 +115,9 @@ testStep desc (HClTest action) = HClTest $ hoist (hoist k) action
           (b,w) <- lift $ runWriterT a
           b <$ tell (pure $ Trace desc $ DL.toList w)
 
+-- | Run a number of tests in parallel, in random order. The first argument is the number of threads
+-- to use. Note that if the test cases require different working directories, some of the threads
+-- may block.
 randomParallel :: Int -> [HClTest Trace ()] -> HClTest Trace ()
 randomParallel n tests = do
 
@@ -118,6 +142,7 @@ randomParallel n tests = do
   HClTest $ tell trac
   guard $ getAll success  
 
+-- | Run a test in the given directory.
 withWorkingDirectory :: FilePath -> HClTest Trace a -> HClTest Trace a
 withWorkingDirectory path a = do
   pwd <- liftIO getCurrentDirectory

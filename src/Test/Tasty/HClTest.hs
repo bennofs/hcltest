@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+
+-- | This module provides support for running hcltest cases using tasty.
 module Test.Tasty.HClTest 
   ( hcltest
   , module X
@@ -44,5 +46,6 @@ instance IsTest HClTasty where
           toResult (True,l) = Result True $ if sl then l else ""
           toResult (False,l) = Result False l
 
+-- | Make a new test case with the given name using a HClTest for testing.
 hcltest :: TestName -> HClTest Trace () -> TestTree
 hcltest n = singleTest n . HClTasty
