@@ -31,10 +31,10 @@ import           System.Timeout
 import           Test.HClTest.Monad
 import           Test.HClTest.Trace
 
--- | A output stream. 
+-- | A output stream.
 data Stream = Stdout | Stderr deriving Show
 
--- | This is the functor from which the free monad Driver is generated. 
+-- | This is the functor from which the free monad Driver is generated.
 -- It is an enumeration of possible primitive operations possible in the Driver monad.
 data DriverF a = MatchStream Stream T.Text a
                | SendInput T.Text a
@@ -58,7 +58,7 @@ expect s = liftF . flip (MatchStream s) ()
 -- | Check that the process' output ended.
 expectEOF :: Stream -> Driver ()
 expectEOF = liftF . flip ExpectEOF ()
- 
+
 -- | Run a driver. The first argument is the timeout for waiting for output of the process.
 -- The second argument are handles to stdin, stdout and stderr of the process. The third
 -- argument is the driver to run. This produces a test step.
@@ -98,7 +98,7 @@ runDriver time (stdinH,stdoutH,stderrH) = iterM interpret
         streamH Stdout = stdoutH
 
         matchFailure :: T.Text -> ByteString -> T.Text -> T.Text -> HClTest String a
-        matchFailure ex got e desc = failTest $ T.unpack $ T.unlines 
+        matchFailure ex got e desc = failTest $ T.unpack $ T.unlines
           [ "- Match failure -"
           , "Expected: " <> ex
           , "Got: " <> T.decodeUtf8 got <> e
@@ -111,10 +111,10 @@ tryGetTimeout :: Handle -> Int -> Int -> IO (Either (Bool,BS.ByteString) BS.Byte
 tryGetTimeout h time m = runEitherT $ do
   eof <- lift (hIsEOF h)
   when eof $ left (True,BS.empty)
-  
+
   hasInput <- lift $ hWaitForInput h time
   unless hasInput $ left (False,BS.empty)
-  
+
   inp <- lift $ BS.hGetNonBlocking h m
   if BS.length inp < m
     then do
@@ -122,7 +122,7 @@ tryGetTimeout h time m = runEitherT $ do
       either left right $ n & _Left._2 %~ mappend inp
     else return inp
 
--- | Read all available data from a handle. The first argument is a timeout for waiting for output. 
+-- | Read all available data from a handle. The first argument is a timeout for waiting for output.
 -- If the process outputs nothing for more than timeout milliseconds, that is considered end of output.
 hReadAvailable :: Int -> Handle -> IO BS.ByteString
 hReadAvailable time h = do
@@ -138,12 +138,12 @@ hReadAvailable time h = do
         else return BS.empty
 
 -- | Make a test step for an interactive program. The first argument is either the working directory
--- or Nothing, which doesn't change the working directory. The second argument is the timeout in seconds 
+-- or Nothing, which doesn't change the working directory. The second argument is the timeout in seconds
 -- for waiting for output of the process. The third argument is the executable file. The forth argument
 -- are the arguments for the executable and the fifth is the driver to use. The driver should return
 -- the expected exit code.
-testInteractive :: Maybe FilePath -> Int -> FilePath -> [String] -> Driver ExitCode -> HClTest Trace ()
-testInteractive wd time prog args driver = do
+testInteractive :: Maybe FilePath -> Maybe [(String, String)] -> Int -> FilePath -> [String] -> Driver ExitCode -> HClTest Trace ()
+testInteractive wd envs time prog args driver = do
 
   let cmdline = prog ++ " " ++ unwords args
   (Just stdinH, Just stdoutH, Just stderrH, p) <- liftIO $ createProcess (proc prog args)
@@ -151,9 +151,10 @@ testInteractive wd time prog args driver = do
                                               , std_out = CreatePipe
                                               , std_err = CreatePipe
                                               , cwd = wd
+                                              , env = envs
                                               }
 
-  testStep ("Run command :: " ++ cmdline ++ maybe "" (\x -> " [WD: " ++ x ++ "]") wd) $ do 
+  testStep ("Run command :: " ++ cmdline ++ maybe "" (\x -> " [WD: " ++ x ++ "]") wd) $ do
 
     exitCode <- runDriver time (stdinH,stdoutH,stderrH) driver
 
@@ -162,13 +163,13 @@ testInteractive wd time prog args driver = do
     err <- liftIO $ hReadAvailable time stderrH
     traceMsg $ T.unpack $ T.decodeUtf8 out
     traceMsg $ T.unpack $ T.decodeUtf8 err
-  
+
     exitCode' <- liftIO $ timeout (time * 1000) $ waitForProcess p
-    liftIO $ when (isNothing exitCode') $ terminateProcess p    
-    
+    liftIO $ when (isNothing exitCode') $ terminateProcess p
+
     case exitCode' of
       Nothing -> failTest "- Process didn't exit -\n"
-      Just exitCode'' -> 
+      Just exitCode'' ->
         unless (exitCode'' == exitCode) $ failTest $ unlines
           [ "- Exit code didn't match - "
           , "Expected: " ++ show exitCode
@@ -177,12 +178,12 @@ testInteractive wd time prog args driver = do
 
     return ()
 
--- | A restricted form of testInteractive that Only tests that the process produces the given output on stderr, and no more. See 
+-- | A restricted form of testInteractive that Only tests that the process produces the given output on stderr, and no more. See
 -- 'testInteractive' for a description of the arguments.
-testStdout :: Maybe FilePath -> Int -> FilePath -> [String] -> ExitCode -> T.Text -> HClTest Trace ()
-testStdout wd time prog args exit out = testInteractive wd time prog args $ exit <$ expect Stdout out <* expectEOF Stdout
+testStdout :: Maybe FilePath -> Maybe [(String, String)] -> Int -> FilePath -> [String] -> ExitCode -> T.Text -> HClTest Trace ()
+testStdout wd envs time prog args exit out = testInteractive wd envs time prog args $ exit <$ expect Stdout out <* expectEOF Stdout
 
 -- | A restricted form of testInteractive that only tests that the process exits with the given exit code.
 -- See 'testInteractive' for a description of the arguments.
-testExitCode :: Maybe FilePath -> Int -> FilePath -> [String] -> ExitCode -> HClTest Trace ()
-testExitCode wd time prog args = testInteractive wd time prog args . return
+testExitCode :: Maybe FilePath -> Maybe [(String, String)] -> Int -> FilePath -> [String] -> ExitCode -> HClTest Trace ()
+testExitCode wd envs time prog args = testInteractive wd envs time prog args . return

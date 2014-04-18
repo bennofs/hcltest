@@ -40,11 +40,11 @@ instance IsTest HClTasty where
     , Option (Proxy :: Proxy HClTestSuccessLog)
     ]
 
-  run opts (HClTasty t) _ = fmap toResult $ runHClTest factor t
+  run opts (HClTasty t) _ = toResult <$> runHClTest factor t
     where HClTestTimeoutFactor factor = lookupOption opts
           HClTestSuccessLog    sl     = lookupOption opts
-          toResult (True,l) = Result True $ if sl then l else ""
-          toResult (False,l) = Result False l
+          toResult (True,l) = testPassed $ if sl then l else ""
+          toResult (False,l) = testFailed l
 
 -- | Make a new test case with the given name using a HClTest for testing.
 hcltest :: TestName -> HClTest Trace () -> TestTree

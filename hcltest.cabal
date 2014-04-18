@@ -1,5 +1,5 @@
 name:          hcltest
-version:       0.1
+version:       0.2
 license:       BSD3
 cabal-version: >= 1.10
 license-file:  LICENSE
@@ -42,8 +42,8 @@ library
     , dlist
     , temporary
     , mtl
-    , lens
-    , tasty
+    , lens >= 4.0 && < 4.2
+    , tasty >= 0.8 && < 0.9
     , tagged
     , mmorph
     , random-shuffle
@@ -51,9 +51,7 @@ library
     , stm
     , optparse-applicative
     , monad-control
-    , lifted-base
     , transformers-base
-    , concurrent-extra
   exposed-modules:
       Test.HClTest
       Test.HClTest.Program
