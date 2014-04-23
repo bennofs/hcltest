@@ -128,7 +128,7 @@ randomParallel n tests = do
       liftIO $ atomically $ modifyTVar' resultVar (<> (All s,t))
     liftIO $ atomically $ modifyTVar' nfinishedVar pred
 
-  liftIO $ atomically $ readTVar nfinishedVar >>= check . (== 0)
+  liftIO $ void $ atomically $ readTVar nfinishedVar >>= check . (== 0)
   (success, trac) <- liftIO $ readTVarIO resultVar
 
   HClTest $ tell trac
