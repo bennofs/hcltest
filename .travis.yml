@@ -1,7 +1,7 @@
 env:
  - GHCVER=7.4.2 CABALVER=1.16
  - GHCVER=7.6.3 CABALVER=1.18
- - GHCVER=7.8.2 CABALVER=1.18 
+ - GHCVER=7.8.2 CABALVER=1.20
 
 before_install:
  - sudo add-apt-repository -y ppa:hvr/ghc
@@ -12,7 +12,8 @@ before_install:
  - export PATH=/opt/ghc/$GHCVER/bin:~/.cabal/bin:$PATH
 
 install:
- - git clone https://github.com/xich/temporary; cd temporary; cabal-$CABALVER install; cd ..
+ - travis/github.sh ekmett/exceptions
+ - travis/github.sh xich/temporary
  - cabal-$CABALVER install --only-dependencies --enable-tests --enable-benchmarks -j
 
 script:
