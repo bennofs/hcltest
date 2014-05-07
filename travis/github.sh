@@ -4,9 +4,9 @@ source travis/util.sh
 
 package=$1
 
-step "Installing $package from github" <<'EOF'
+step "Installing $package from github" <<EOF
   git clone "https://github.com/$package"
   cd "$package"
-  cabal-$CABALVER install -j
+  cabal-\$CABALVER install -j
   cd ..
 EOF
