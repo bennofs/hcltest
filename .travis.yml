@@ -12,6 +12,7 @@ before_install:
  - export PATH=/opt/ghc/$GHCVER/bin:~/.cabal/bin:$PATH
 
 install:
+ - git clone https://github.com/xich/temporary; cd temporary; cabal-$CABALVER install; cd ..
  - cabal-$CABALVER install --only-dependencies --enable-tests --enable-benchmarks -j
 
 script:
