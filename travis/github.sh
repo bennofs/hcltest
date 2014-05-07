@@ -4,14 +4,12 @@ source travis/util.sh
 
 package=$1
 
-echo -e "${green}Installing $package from github${nc}"
-
 tmp=`mktemp -d`  
-git clone "https://github.com/$package" $tmp
 
-olddir=$PWD
-cd $tmp
-cabal-$CABALVER install -j
+step_suppress "Getting sources of $package" <<EOF
+  git clone "https://github.com/$package" $tmp
+EOF
 
-cd $olddir
-rm -rf $tmp
+step_suppress "Adding $package to sandbox" <<EOF
+  cabal-\$CABALVER sandbox add-source $tmp
+EOF
