@@ -13,8 +13,6 @@ before_install:
 
 install:
  - cabal-$CABALVER sandbox init
- - travis/github.sh ekmett/exceptions
- - travis/github.sh xich/temporary
  - cabal-$CABALVER install --only-dependencies --enable-tests --enable-benchmarks -j
 
 script:
