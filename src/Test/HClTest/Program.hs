@@ -137,12 +137,14 @@ hReadAvailable time h = do
           mappend c <$> hReadAvailable time h
         else return BS.empty
 
--- | Make a test step for an interactive program. The first argument is either the working directory
--- or Nothing, which doesn't change the working directory. The second argument is the timeout in seconds
--- for waiting for output of the process. The third argument is the executable file. The forth argument
--- are the arguments for the executable and the fifth is the driver to use. The driver should return
--- the expected exit code.
-testInteractive :: Maybe FilePath -> Maybe [(String, String)] -> Int -> FilePath -> [String] -> Driver ExitCode -> HClTest Trace ()
+-- | Make a test step for an interactive program.
+testInteractive :: Maybe FilePath           -- ^ Working directory or Nothing to keep the current directory.
+                -> Maybe [(String, String)] -- ^ Environment or Nothing to inherit the current environment.
+                -> Int                      -- ^ Timeout in seconds to wait for output of the process.
+                -> FilePath                 -- ^ Path to the executable to execute.
+                -> [String]                 -- ^ Arguments for the program.
+                -> Driver ExitCode          -- ^ Driver to use. The ExitCode returned specifies the expected exit code of the process.
+                -> HClTest Trace ()
 testInteractive wd envs time prog args driver = do
 
   let cmdline = prog ++ " " ++ unwords args
