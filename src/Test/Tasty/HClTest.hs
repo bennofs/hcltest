@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | This module provides support for running hcltest cases using tasty.
-module Test.Tasty.HClTest 
+module Test.Tasty.HClTest
   ( hcltest
   , module X
   ) where
@@ -17,7 +17,7 @@ import Test.Tasty.Providers
 
 newtype HClTasty = HClTasty (HClTest Trace ()) deriving Typeable
 
--- | Factor to apply to the test timeout. 
+-- | Factor to apply to the test timeout.
 newtype HClTestTimeoutFactor = HClTestTimeoutFactor Double deriving (Typeable, Ord, Num, Eq, Real)
 instance IsOption HClTestTimeoutFactor where
   defaultValue = 1
@@ -33,7 +33,7 @@ instance IsOption HClTestSuccessLog where
   optionName = return "hcltest-success-log"
   optionHelp = return "Also print the log when the test succeeded"
   optionCLParser = HClTestSuccessLog <$> switch (long "hcltest-success-log" <> help "Also print the log when the test succeeded")
-  
+
 instance IsTest HClTasty where
   testOptions = return
     [ Option (Proxy :: Proxy HClTestTimeoutFactor)
