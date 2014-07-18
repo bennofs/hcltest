@@ -12,8 +12,6 @@ before_install:
  - export PATH=/opt/ghc/$GHCVER/bin:~/.cabal/bin:$PATH
 
 install:
- - travis/github.sh ekmett/exceptions
- - travis/github.sh xich/temporary
  - cabal-$CABALVER install --only-dependencies --enable-tests --enable-benchmarks -j
 
 script:
