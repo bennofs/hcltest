@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 -- | This module defines the basic test type, HClTest, which is a monad. It also provides functions
 -- for creating and running tests.
 module Test.HClTest.Monad
@@ -51,9 +52,9 @@ instance MonadBase IO (HClTest w) where
   liftBase = liftIO
 
 instance MonadBaseControl IO (HClTest w) where
-  data StM (HClTest w) a = HClTestSt { unHClTestSt :: StM (ReaderT Config (MaybeT (WriterT (DL.DList w) IO))) a }
-  liftBaseWith f = HClTest $ liftBaseWith (\k -> f (fmap HClTestSt . k . unHClTest ))
-  restoreM = HClTest . restoreM . unHClTestSt
+  type StM (HClTest w) a = StM (ReaderT Config (MaybeT (WriterT (DL.DList w) IO))) a
+  liftBaseWith f = HClTest $ liftBaseWith (\k -> f (k . unHClTest ))
+  restoreM = HClTest . restoreM
 
 -- | Run a HClTest. The first argument is the timeout for waiting for output
 -- of the process, in milliseconds. The second argument is the test case.

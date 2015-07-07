@@ -30,6 +30,7 @@ import           System.Process
 import           System.Timeout
 import           Test.HClTest.Monad
 import           Test.HClTest.Trace
+import           Prelude
 
 -- | A output stream.
 data Stream = Stdout | Stderr deriving Show
