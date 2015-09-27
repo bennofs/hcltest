@@ -45,6 +45,14 @@ withUnicode m = do
 withUnicode m = m
 ##endif
 
+packageDBFlag :: String
+
+#if __GLASGOW_HASKELL__ >= 706
+packageDBFlag = "-package-db"
+#else
+packageDBFlag = "-package-conf"
+#endif
+
 main :: IO ()
 main = withUnicode $ do
   forM_ doctestTargets $ \(name, mods, dirs, dep) -> do
@@ -54,7 +62,7 @@ main = withUnicode $ do
       : "-idist/build"
       : "-optP-include"
       : "-optPdist/build/autogen/cabal_macros.h"
-      : "-package-dbdist/package.conf.inplace"
+      : (packageDBFlag ++ "dist/package.conf.inplace")
       : "-hide-all-packages"
       : map ("-package="++) dep
         ++ map ("-i"++) dirs
