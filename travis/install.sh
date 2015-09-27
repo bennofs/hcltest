@@ -44,9 +44,8 @@ if [ ! -z $ROOT ]; then
       mkdir -p $HOME/tools
       cd $HOME/tools
       cabal sandbox init
-      cabal install hlint packunused -j
-      ln -s $PWD/.cabal-sandbox/bin $PWD/bin
-      cd $TRAVIS_BUILD_DIR
+      cabal install hlint packunused
+      ln -s $HOME/tools/.cabal-sandbox/bin $HOME/tools/bin
     else
       echo "Tools already installed"
     fi
